@@ -2,50 +2,37 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
 
-class Square extends React.Component {
-  render() {
-    return (
-      <button className="square" onClick={() => this.props.onClick()}>
-        {this.props.value}
-      </button>
-    );
-  }
+/*
+  We could have made Square an extension of React.Component,
+  but we add it as a function instead, because it is simpler
+  to write a function and because a function executes faster.
+*/
+function Square(props) {
+  return (
+    /*
+      We call props.onClick rather than props.onClick()
+      because the latter would call onClick immediately.
+    */
+    <button className="square" onClick={props.onClick}>
+      {props.value}
+    </button>
+  );
 }
 
 class Board extends React.Component {
 
-  /*
-    We will keep track of the state of each square in the Board class.
-    This is good practice when developing with React.
-  */
-  constructor(props) {
-    super(props);
-    this.state = {
-      squares: Array(9).fill(null),
-    };
-  }
-
-  handleClick(i) {
-    const squares = this.state.squares.slice();
-    squares[i] = 'X';
-    this.setState({squares:squares});
-  }
-
   renderSquare(i) {
     return (
       <Square
-        value={this.state.squares[i]}
-        onClick={() => this.handleClick(i)}
+        value={this.props.squares[i]}
+        onClick={() => this.props.onClick(i)}
       />
     );
   }
 
   render() {
-    const status = 'Next player: X';
-
     return (
       <div>
-        <div className="status">{status}</div>
         <div className="board-row">
           {this.renderSquare(0)}
           {this.renderSquare(1)}
@@ -67,19 +54,128 @@ class Board extends React.Component {
 }
 
 class Game extends React.Component {
+
+  /* Pull up state from Board into Game. */
+  constructor(props) {
+    super(props);
+    this.state = {
+      history: [{
+        squares: Array(9).fill(null),
+        i: -1,
+      }],
+      stepNumber: 0,
+      xIsNext: true,
+    }
+  }
+
+  jumpTo(step) {
+    this.setState({
+      stepNumber: step,
+      xIsNext: (step % 2) === 0,
+    });
+  }
+
   render() {
+    const history = this.state.history;
+    const current = history[this.state.stepNumber];
+    const winner = determineWinner(current.squares);
+
+    /* Create a button for each move made that takes us back to that move. */
+    const moves = history.map((step, move) => {
+      const desc = move ?
+        'Go to move #' + move + ' (' + getCol(this.state.history[move].i) + ', ' + getRow(this.state.history[move].i) + ')' :
+        'Go to game start';
+      return (
+        <li key={move}>
+          <button onClick={() => this.jumpTo(move)}>{desc}</button>
+        </li>
+      )
+    });
+
+    let status;
+    if(winner) {
+      status = 'Winner: ' + winner;
+    } else {
+      status = 'Next player: ' + (this.state.xIsNext ? 'X' : 'O');
+    }
+
     return (
       <div className="game">
         <div className="game-board">
-          <Board />
+        <Board
+          squares = {current.squares}
+          onClick = {(i) => this.handleClick(i)}
+        />
         </div>
         <div className="game-info">
-          <div>{/* status */}</div>
-          <ol>{/* TODO */}</ol>
+          <div>{status}</div>
+          <ol>{moves}</ol>
         </div>
       </div>
     );
   }
+
+  /* This method adds an X to a square when the user clicks on the square. */
+  handleClick(i) {
+
+    const history = this.state.history.slice(0, this.state.stepNumber + 1);
+    const current = history[history.length - 1];
+    const squares = current.squares.slice();
+
+    /*
+      If there is already a winner, or the square has already been filled,
+      do not change the square.
+    */
+    if(determineWinner(squares) || squares[i]) {
+      return;
+    }
+
+    squares[i] = this.state.xIsNext ? 'X' : 'O';
+
+    this.setState({
+      history: history.concat([{
+        squares: squares,
+        /* Record which square was clicked. */
+        i: i,
+      }]),
+      stepNumber: history.length,
+      xIsNext: !this.state.xIsNext,
+    });
+  }
+}
+
+/*
+  Determines the winner of the game by checking whether any column or row
+  includes three Xs or three Os.
+*/
+function determineWinner(squares) {
+  const lines = [
+    [0, 1, 2],
+    [3, 4, 5],
+    [6, 7, 8],
+    [0, 3, 6],
+    [1, 4, 7],
+    [2, 5, 8],
+    [0, 4, 8],
+    [2, 4, 6],
+  ];
+  for (let i = 0; i < lines.length; i++) {
+    const [a, b, c] = lines[i];
+    if (squares[a] && squares[a] === squares[b] && squares[a] === squares[c]) {
+      return squares[a];
+    }
+  }
+  return null;
+}
+
+/* Returns the column number of a given square. */
+function getCol(i) {
+  return i % 3 + 1;
+}
+
+/* Returns the row number of a given square. */
+function getRow(i) {
+  return Math.ceil((i+1)/3);
 }
 
 // ========================================

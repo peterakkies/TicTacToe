@@ -30,26 +30,26 @@ class Board extends React.Component {
     );
   }
 
-  render() {
+  renderRow(i) {
+    var rowHTML = [];
+
+    for (let j = 0; j < 3; j++) {
+      rowHTML.push(this.renderSquare(i * 3 + j));
+    }
+
     return (
-      <div>
-        <div className="board-row">
-          {this.renderSquare(0)}
-          {this.renderSquare(1)}
-          {this.renderSquare(2)}
-        </div>
-        <div className="board-row">
-          {this.renderSquare(3)}
-          {this.renderSquare(4)}
-          {this.renderSquare(5)}
-        </div>
-        <div className="board-row">
-          {this.renderSquare(6)}
-          {this.renderSquare(7)}
-          {this.renderSquare(8)}
-        </div>
-      </div>
+      <div className="board-row">{rowHTML}</div>
     );
+  }
+
+  render() {
+    var boardHTML = [];
+
+    for (let i = 0; i < 3; i++) {
+      boardHTML.push(this.renderRow(i));
+    }
+
+    return <div>{boardHTML}</div>;
   }
 }
 
@@ -85,11 +85,23 @@ class Game extends React.Component {
       const desc = move ?
         'Go to move #' + move + ' (' + getCol(this.state.history[move].i) + ', ' + getRow(this.state.history[move].i) + ')' :
         'Go to game start';
-      return (
-        <li key={move}>
-          <button onClick={() => this.jumpTo(move)}>{desc}</button>
-        </li>
-      )
+
+      /* Bold the currently selected step. */
+      if(this.state.stepNumber === move)
+      {
+        return (
+          <li key={move}>
+            <button style={{fontWeight: 'bold'}} onClick={() => this.jumpTo(move)}>{desc}</button>
+          </li>
+        )
+      } else {
+        return (
+          <li key={move}>
+            <button onClick={() => this.jumpTo(move)}>{desc}</button>
+          </li>
+        )
+      }
+
     });
 
     let status;
